@@ -41,7 +41,7 @@ Catxi Backend는 가톨릭대학교 캠퍼스 근처에서 학생들의 안전�
 - **Jenkins** - 빌드 도구
 
 ## 🏗 아키텍처
-<img width="2307" height="1718" alt="image" src="https://github.com/user-attachments/assets/39d4d899-aa15-4a1a-935d-1d6dd2c710a5" />
+<img width="1851" height="1121" alt="Catxi 운영 아키텍처" src="docs/assets/ops-architecture.svg" />
 
 
 ## 📚 API 문서
