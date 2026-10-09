@@ -1,0 +1,49 @@
+{
+  "runId": "run-20261006-1pct-mau-ingress-5rps-120m-v10",
+  "startedAtUtc": "2026-10-05T17:57:59Z",
+  "endedAtUtc": "2026-10-05T19:59:27Z",
+  "environment": {
+    "type": "local Docker",
+    "appInstances": 2,
+    "cpuQuotaCoresPerApp": 1,
+    "memoryLimitMiBPerApp": 768,
+    "hostGuestPairs": 23,
+    "webSocketConnections": 46,
+    "targetSendFramesPerSecond": 5,
+    "firebaseDeviceTokens": 0
+  },
+  "k6": {
+    "sendFrames": 35995,
+    "meanSendFramesPerSecond": 4.997,
+    "guestDeliveries": 35995,
+    "guestDeliveryFailures": 0,
+    "guestDeliveryLatencyP50Ms": 43,
+    "guestDeliveryLatencyP95Ms": 335,
+    "guestDeliveryLatencyMaxMs": 4624,
+    "httpRequestFailures": 0,
+    "droppedIterations": 0
+  },
+  "routing": {
+    "webSocketUpgradesToApp1": 23,
+    "webSocketUpgradesToApp2": 23
+  },
+  "outbox": {
+    "newRows": 36018,
+    "sentRows": 36018,
+    "pendingRows": 0
+  },
+  "redisStream": {
+    "observedConsumerLag": 0,
+    "observedPendingEntries": "1-2",
+    "deadLetterQueueLength": 0
+  },
+  "connectionPool": {
+    "maximumObservedPendingPerApp": 0,
+    "maximumObservedActiveConnectionsPerApp": 5
+  },
+  "interpretation": [
+    "SENT is the SQL outbox publication state and does not mean Firebase accepted the message.",
+    "The run had no Firebase device tokens and made no Firebase provider calls.",
+    "Docker CPU quota is not an AWS T3 CPU credit model."
+  ]
+}
