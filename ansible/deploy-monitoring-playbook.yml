@@ -5,16 +5,6 @@
   vars:
     monitoring_dir: "/opt/catxi-monitoring"
 
-  pre_tasks:
-    - name: Debug received variables from AWX
-      debug:
-        msg:
-          - "=== AWX Monitoring Variables Debug ==="
-          - "EC2_INSTANCE_1: '{{ EC2_INSTANCE_1 | default('UNDEFINED') }}'"
-          - "EC2_INSTANCE_2: '{{ EC2_INSTANCE_2 | default('UNDEFINED') }}'"
-          - "GRAFANA_ADMIN_PASSWORD: '{{ GRAFANA_ADMIN_PASSWORD | default('UNDEFINED') }}'"
-          - "DISCORD_WEBHOOK_URL: '{{ DISCORD_WEBHOOK_URL | default('UNDEFINED') }}'"
-
   tasks:
     - name: Create monitoring directory
       file:
@@ -186,75 +176,39 @@
         var: container_status.stdout_lines
 
     - name: Verify Prometheus targets
-      uri:
-        url: "http://localhost:9090/api/v1/targets"
+      ansible.builtin.uri:
+        url: "http://localhost:9090/api/v1/targets?state=active"
         method: GET
-        return_content: yes
+        status_code: 200
+        return_content: true
       register: prometheus_targets
-      failed_when: false
-      retries: 3
-      delay: 10
+      changed_when: false
+      retries: 24
+      delay: 5
+      until:
+        - prometheus_targets.status == 200
+        - prometheus_targets.json.status | default('') == 'success'
+        - >-
+          (prometheus_targets.json.data.activeTargets | default([])
+          | selectattr('labels.job', 'equalto', 'catxi-backend-instances')
+          | list | length) == 2
+        - >-
+          (prometheus_targets.json.data.activeTargets | default([])
+          | selectattr('labels.job', 'equalto', 'catxi-backend-instances')
+          | selectattr('health', 'equalto', 'up')
+          | list | length) == 2
+        - >-
+          (prometheus_targets.json.data.activeTargets | default([])
+          | selectattr('labels.job', 'equalto', 'node-exporter')
+          | list | length) == 1
+        - >-
+          (prometheus_targets.json.data.activeTargets | default([])
+          | selectattr('labels.job', 'equalto', 'node-exporter')
+          | selectattr('health', 'equalto', 'up')
+          | list | length) == 1
 
-    - name: Display Prometheus targets status
-      debug:
-        msg: "Prometheus has {{ (prometheus_targets.json.data.activeTargets | length) if prometheus_targets.json is defined else 'unknown' }} active targets"
-
-    - name: Display access information
+    - name: Display monitoring deployment result
       debug:
         msg:
-          - "🎉 Catxi Monitoring Stack deployed successfully!"
-          - "📊 Grafana: http://{{ ansible_host }}:3000 (localhost only)"
-          - "📈 Prometheus: http://{{ ansible_host }}:9090 (localhost only)"
-          - "🔔 AlertManager: http://{{ ansible_host }}:9093 (localhost only)"
-          - "📊 Pushgateway: http://{{ ansible_host }}:9091 (localhost only)"
-          - "📝 Loki: http://{{ ansible_host }}:3100 (localhost only)"
-          - "👤 Grafana Login: admin / {{ GRAFANA_ADMIN_PASSWORD | default('catxi2024!') }}"
-          - "🔍 Monitoring targets:"
-          - "  - Load Balancer: https://catxi.kro.kr/actuator/prometheus"
-          - "  - EC2 Instance 1: {{ EC2_INSTANCE_1 | default('undefined') }}:8080"
-          - "  - EC2 Instance 2: {{ EC2_INSTANCE_2 | default('undefined') }}:8080"
-          - "⚠️  Services are bound to localhost for security"
-
-  post_tasks:
-    - name: Create monitoring health check script
-      copy:
-        content: |
-          #!/bin/bash
-          echo "=== Catxi Monitoring Stack Health Check ==="
-          echo "Timestamp: $(date)"
-          echo ""
-          
-          echo "📊 Container Status:"
-          cd {{ monitoring_dir }} && docker compose ps
-          echo ""
-          
-          echo "🔍 Service Health:"
-          for service in grafana:3000 prometheus:9090 pushgateway:9091 alertmanager:9093 loki:3100; do
-            name=$(echo $service | cut -d: -f1)
-            port=$(echo $service | cut -d: -f2)
-            if curl -s -f http://localhost:$port >/dev/null 2>&1; then
-              echo "✅ $name is running on port $port"
-            else
-              echo "❌ $name is not responding on port $port"
-            fi
-          done
-          
-          echo ""
-          echo "📈 Prometheus Targets:"
-          curl -s http://localhost:9090/api/v1/targets 2>/dev/null | jq -r '.data.activeTargets[]? | "\(.labels.job): \(.health)"' 2>/dev/null || echo "Unable to fetch target status"
-          
-          echo ""
-          echo "📊 Prometheus Configuration Reload:"
-          curl -s -X POST http://localhost:9090/-/reload && echo "✅ Configuration reloaded successfully" || echo "❌ Failed to reload configuration"
-        dest: "{{ monitoring_dir }}/health-check.sh"
-        mode: '0755'
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-
-    - name: Run initial health check
-      command: "{{ monitoring_dir }}/health-check.sh"
-      register: health_check
-
-    - name: Display health check results
-      debug:
-        var: health_check.stdout_lines
+          - "Monitoring stack deployed on {{ ansible_host }}."
+          - "Two backend targets and one monitoring host target are healthy."
